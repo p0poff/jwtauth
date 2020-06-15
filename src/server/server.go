@@ -15,6 +15,23 @@ type auth struct {
 	Pass string
 }
 
+type response struct {
+	Code int `json:"code"`
+	Result map[string]string `json:"result"`
+}
+
+func (resp response) get(code int, res map[string]string) (string, error) {
+	resp.Code = code
+	resp.Result = res
+	slcB, err := json.Marshal(&resp)
+	return string(slcB), err
+}
+
+func (resp response) getError(error string) string {
+	_r, _ := resp.get(400, map[string]string{"error":error})
+	return _r
+}
+
 var jwtClaims my_jwt.Claims
 
 func getClaims(r *http.Request) (auth, error) {
@@ -30,27 +47,35 @@ func getClaims(r *http.Request) (auth, error) {
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
-	
+	var resp response
+
 	a, err := getClaims(r)
  	if err != nil {
- 		http.Error(w, err.Error(), http.StatusBadRequest)
+ 		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
  		return
  	}
 
  	user, err := model.GetUser(a.Login, a.Pass)
  	if err != nil {
- 		http.Error(w, err.Error(), http.StatusBadRequest)
+ 		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
  		return
  	}
 
  	token, err := jwtClaims.GenToken(user.Username, param)
  	if err != nil{
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
  		return
  	}
-    fmt.Fprintf(w, "Person: %+v\n", user)
+ 	
+ 	
+ 	strR, err := resp.get(200, map[string]string{"token": token})
+ 	if err != nil {
+ 		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
+ 		return
+ 	}
 
-    fmt.Fprintf(w, token)
+ 	w.Header().Set("Content-Type", "application/json")
+    fmt.Fprintf(w, strR)
 }
 
 func checkHandler(w http.ResponseWriter, r *http.Request) {
