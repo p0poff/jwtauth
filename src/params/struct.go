@@ -1,11 +1,11 @@
 package params
 
-import (
-	"time"
-)
+// import (
+// 	"time"
+// )
 
 type Init struct {
-	Expire time.Duration
+	Expire int64
 	TokenKey string
 }
 

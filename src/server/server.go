@@ -46,6 +46,10 @@ func getClaims(r *http.Request) (auth, error) {
     return a, nil
 }
 
+func getToken(r *http.Request) (string, error) {
+	return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VybmFtZSI6InBvcG9mZiIsImV4cCI6MTU5MjgyODM0NCwiaWF0IjoxNTkyODI3MzQ0LCJpc3MiOiJqd3QifQ.zmI78fbsoFWr6TBY9PAnyRBNQ2HHIEXfKwk2IPAr3Is", nil
+}
+
 func loginHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
 	var resp response
 
@@ -74,22 +78,56 @@ func loginHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
  		return
  	}
 
- 	w.Header().Set("Content-Type", "application/json")
-    fmt.Fprintf(w, strR)
+ 	fmt.Fprintf(w, strR)
 }
 
-func checkHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "check")
+func checkHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
+	var resp response
+
+	token, err := getToken(r)
+	if err != nil {
+		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
+ 		return
+	}
+
+	isValid, err := jwtClaims.IsValid(token, param)
+	if err != nil {
+		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
+ 		return
+	}
+
+	res := map[string]string{"res": ""}
+
+	if isValid {
+		res["res"] = "valid"
+	} else {
+		res["res"] = "no valid"
+	}
+	
+	strR, err := resp.get(200, res)
+ 	if err != nil {
+ 		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
+ 		return
+ 	}
+
+ 	fmt.Fprintf(w, strR)
+}
+
+func handlerWrapper(param params.Init, f func(http.ResponseWriter, *http.Request, params.Init)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		f(w, r, param)
+	}
 }
 
 func GetServer(param params.Init) error {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "error")
 	})
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		loginHandler(w, r, param)
-	})
-	http.HandleFunc("/check", checkHandler)
+	
+	http.HandleFunc("/login", handlerWrapper(param, loginHandler))
+
+	http.HandleFunc("/check", handlerWrapper(param, checkHandler))
 	err := http.ListenAndServe(":9000", nil)
 	return err
 }
