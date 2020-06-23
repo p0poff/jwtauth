@@ -27,6 +27,22 @@ func (claims Claims) GenToken(username string, param params.Init) (string, error
 	return token.SignedString(mySigningKey)
 }
 
+func (claims Claims) ParseToken(strToken string, param params.Init) (map[string]string, error) {
+	token, err := jwt_git.ParseWithClaims(strToken, &Claims{}, func(token *jwt_git.Token) (interface{}, error) {
+        return []byte(param.TokenKey), nil
+    })
+
+    if err != nil {
+    	return map[string]string{}, err
+    } 
+
+    if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+        return map[string]string{"username": claims.Username}, nil
+    } 
+
+    return map[string]string{}, nil
+}
+
 func (claims Claims) IsValid(strToken string, param params.Init) (bool, error) {
 	token, err := jwt_git.ParseWithClaims(strToken, &Claims{}, func(token *jwt_git.Token) (interface{}, error) {
         return []byte(param.TokenKey), nil

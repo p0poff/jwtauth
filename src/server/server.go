@@ -10,9 +10,13 @@ import (
 	"my_jwt"
 )
 
-type auth struct {
+type reqAuth struct {
 	Login string
 	Pass string
+}
+
+type reqToken struct {
+	Token string
 }
 
 type response struct {
@@ -34,8 +38,8 @@ func (resp response) getError(error string) string {
 
 var jwtClaims my_jwt.Claims
 
-func getClaims(r *http.Request) (auth, error) {
-	var a auth
+func getClaims(r *http.Request) (reqAuth, error) {
+	var a reqAuth
 	err := json.NewDecoder(r.Body).Decode(&a)
 	if err != nil {
         return a, err
@@ -47,7 +51,15 @@ func getClaims(r *http.Request) (auth, error) {
 }
 
 func getToken(r *http.Request) (string, error) {
-	return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VybmFtZSI6InBvcG9mZiIsImV4cCI6MTU5MjgyODM0NCwiaWF0IjoxNTkyODI3MzQ0LCJpc3MiOiJqd3QifQ.zmI78fbsoFWr6TBY9PAnyRBNQ2HHIEXfKwk2IPAr3Is", nil
+	var t reqToken
+	err := json.NewDecoder(r.Body).Decode(&t)
+	if err != nil {
+        return "", err
+    }
+    if t.Token == "" {
+    	return "", errors.New("Token is empty")
+    }
+    return t.Token, nil
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
@@ -90,21 +102,14 @@ func checkHandler(w http.ResponseWriter, r *http.Request, param params.Init) {
  		return
 	}
 
-	isValid, err := jwtClaims.IsValid(token, param)
+	tokenData, err := jwtClaims.ParseToken(token, param)
 	if err != nil {
 		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
  		return
 	}
 
-	res := map[string]string{"res": ""}
-
-	if isValid {
-		res["res"] = "valid"
-	} else {
-		res["res"] = "no valid"
-	}
 	
-	strR, err := resp.get(200, res)
+	strR, err := resp.get(200, tokenData)
  	if err != nil {
  		http.Error(w, resp.getError(err.Error()), http.StatusBadRequest)
  		return
