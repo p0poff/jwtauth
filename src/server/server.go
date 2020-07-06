@@ -133,6 +133,6 @@ func GetServer(param params.Init) error {
 	http.HandleFunc("/login", handlerWrapper(param, loginHandler))
 
 	http.HandleFunc("/check", handlerWrapper(param, checkHandler))
-	err := http.ListenAndServe(":9000", nil)
+	err := http.ListenAndServe(param.Port, nil)
 	return err
 }

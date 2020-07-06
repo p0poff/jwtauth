@@ -5,5 +5,5 @@ func InitParams() Init {
 }
 
 func InitManual() Init {
-	return Init{Expire: 1000, TokenKey: "test"} 
+	return Init{Expire: 1000, TokenKey: "test", Port: ":9000"} 
 }

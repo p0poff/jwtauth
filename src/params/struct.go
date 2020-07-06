@@ -7,5 +7,6 @@ package params
 type Init struct {
 	Expire int64
 	TokenKey string
+	Port string
 }
 
